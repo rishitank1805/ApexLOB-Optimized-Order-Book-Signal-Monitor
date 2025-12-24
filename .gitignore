@@ -1,6 +1,7 @@
 # Ignore the build directory
 build/
 bin/
+lib/
 obj/
 
 # Ignore OS-specific files
