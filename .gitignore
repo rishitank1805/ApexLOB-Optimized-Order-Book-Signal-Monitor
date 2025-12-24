@@ -1,0 +1,13 @@
+# Ignore the build directory
+build/
+bin/
+obj/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
+*.user
