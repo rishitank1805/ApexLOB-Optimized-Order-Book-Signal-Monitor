@@ -237,15 +237,4 @@ ls -la lib/ixwebsocket/lib/libixwebsocket.a
 - Real-time metric calculations
 - Efficient JSON parsing with nlohmann/json
 
-## License
-
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines if applicable]
-
-## Author
-
-[Add author information]
 
