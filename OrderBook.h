@@ -63,11 +63,18 @@ private:
     }
 
 public:
-    void displayMetrics() const {
+    void displayMetrics(double processingTimeMs = 0.0, int totalMessages = 0, double totalProcessingTimeMs = 0.0) const {
         std::lock_guard<std::mutex> lock(mtx);
         double vwap = (totalVolumeTraded > 0) ? (cumulativeNotional / totalVolumeTraded) : 0;
+        double avgProcessingTime = (totalMessages > 0) ? (totalProcessingTimeMs / totalMessages) : 0.0;
+        
         std::cout << "\r[LOB] Last: " << std::fixed << std::setprecision(2) << lastTradePrice 
-                  << " | VWAP: " << vwap << " | Vol: " << totalVolumeTraded << std::flush;
+                  << " | VWAP: " << vwap << " | Vol: " << totalVolumeTraded;
+        if (totalMessages > 0) {
+            std::cout << " | Msg: " << totalMessages 
+                      << " | AvgProc: " << std::setprecision(3) << avgProcessingTime << "ms";
+        }
+        std::cout << std::flush;
     }
 };
 
