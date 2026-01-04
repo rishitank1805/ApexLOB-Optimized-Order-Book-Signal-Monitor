@@ -184,14 +184,33 @@ For comprehensive performance metrics, testing methods, advanced profiling techn
 
 ## Prerequisites
 
+### For C++ Implementation
+
 - **macOS** (tested on macOS with Homebrew)
 - **C++17 compatible compiler** (Clang/GCC)
 - **CMake 3.10 or higher**
 - **Homebrew** package manager (for macOS)
 
-## Dependencies
+### For Python Implementation
 
-The project requires the following dependencies:
+- **Python 3.7 or higher**
+- **pip** (Python package installer, usually comes with Python)
+- **Internet connection** (for downloading dependencies)
+
+## Implementation Guides
+
+This project provides two complete implementations:
+
+1. **C++ Implementation** - High-performance production-ready version
+2. **Python Implementation** - Educational and comparison version
+
+---
+
+## 🚀 C++ Implementation
+
+### Dependencies
+
+The C++ implementation requires:
 
 - **IXWebSocket** - WebSocket library (bundled locally)
 - **nlohmann/json** - JSON parsing library
@@ -199,7 +218,7 @@ The project requires the following dependencies:
 - **ZLIB** - Compression library
 - **Threads** - Multi-threading support
 
-### Installing Dependencies
+### Installing C++ Dependencies
 
 #### macOS (using Homebrew)
 
@@ -219,22 +238,22 @@ brew install zlib
 
 **Note:** IXWebSocket is included in the `lib/` directory, so no additional installation is needed.
 
-## Building the Project
+### Building the C++ Project
 
-### Step 1: Clone or Navigate to the Project Directory
+#### Step 1: Clone or Navigate to the Project Directory
 
 ```bash
 cd "path/to/ApexLOB-Optimized-Order-Book-Signal-Monitor"
 ```
 
-### Step 2: Create Build Directory
+#### Step 2: Create Build Directory
 
 ```bash
 mkdir -p build
 cd build
 ```
 
-### Step 3: Configure with CMake
+#### Step 3: Configure with CMake
 
 ```bash
 cmake ..
@@ -256,7 +275,7 @@ You should see output like:
 -- Generating done
 ```
 
-### Step 4: Build the Executable
+#### Step 4: Build the Executable
 
 ```bash
 make
@@ -270,22 +289,22 @@ make -j$(sysctl -n hw.ncpu)
 
 The executable `TradingEngine` will be created in the `build/` directory.
 
-## Running the Program
+### Running the C++ Implementation
 
-### Run from Build Directory
+#### Run from Build Directory
 
 ```bash
 cd build
 ./TradingEngine
 ```
 
-### Run from Project Root
+#### Run from Project Root
 
 ```bash
 ./build/TradingEngine
 ```
 
-### Expected Output
+#### Expected Output
 
 When running, you should see:
 
@@ -293,14 +312,141 @@ When running, you should see:
 Connecting to Binance BTC/USDT Live Feed...
 Connecting to Binance WebSocket...
 Connected successfully! Waiting for data...
-[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234
+[INFO] Connection established in 234ms
+[INFO] First message received in 567ms
+[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 1 | AvgProc: 0.045ms
 ```
 
 The metrics will update in real-time as trades are received from Binance.
 
-### Stopping the Program
+#### Stopping the Program
 
-Press `Ctrl+C` to stop the program gracefully.
+Press `Ctrl+C` to stop the program gracefully. You'll see final statistics:
+
+```
+[INFO] Total messages processed: 1245
+[INFO] Messages per second: 41.50
+[INFO] Average processing time: 0.052 ms
+```
+
+---
+
+## 🐍 Python Implementation
+
+### Dependencies
+
+The Python implementation requires:
+
+- **websocket-client** - WebSocket library for Python
+- **Python Standard Library** - `json`, `threading`, `time`, `collections`, `enum`, `dataclasses`
+
+### Installing Python Dependencies
+
+#### Step 1: Check Python Version
+
+```bash
+python3 --version
+```
+
+Ensure you have Python 3.7 or higher. If not, install it:
+
+```bash
+# macOS (using Homebrew)
+brew install python3
+```
+
+#### Step 2: Install Dependencies
+
+Install required packages using pip:
+
+```bash
+# Install from requirements.txt (recommended)
+pip3 install -r requirements.txt
+
+# Or install manually
+pip3 install websocket-client>=1.6.0
+```
+
+**Note:** If you encounter permission errors, use `pip3 install --user` or consider using a virtual environment:
+
+```bash
+# Create virtual environment (optional but recommended)
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Running the Python Implementation
+
+#### Basic Usage
+
+```bash
+# From project root directory
+python3 main.py
+```
+
+#### Using Virtual Environment (if created)
+
+```bash
+# Activate virtual environment first
+source venv/bin/activate  # On macOS/Linux
+
+# Run the program
+python3 main.py
+```
+
+#### Expected Output
+
+When running, you should see:
+
+```
+Connecting to Binance BTCUSDT/USDT Live Feed...
+WebSocket URL: wss://stream.binance.com:443/ws/btcusdt@aggTrade
+[INFO] Connected to Binance WebSocket
+[INFO] Connection established in 345ms
+[INFO] First message received in 678ms
+[10:30:45.123] [LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 1 | AvgProc: 0.234ms
+```
+
+The metrics will update in real-time as trades are received from Binance.
+
+#### Stopping the Program
+
+Press `Ctrl+C` to stop the program gracefully. You'll see final statistics:
+
+```
+[INFO] WebSocket connection closed
+[INFO] Connection duration: 30.25 seconds
+[INFO] Total messages processed: 987
+[INFO] Messages per second: 32.90
+[INFO] Average processing time: 0.287 ms
+```
+
+### Python Configuration
+
+#### Changing the Trading Pair
+
+Edit `main.py` and modify the symbol parameter:
+
+```python
+# In main() function, change:
+client = BinanceWebSocketClient(symbol="btcusdt")
+
+# For example, for ETH/USDT:
+client = BinanceWebSocketClient(symbol="ethusdt")
+```
+
+#### WebSocket Endpoint
+
+The Python implementation uses the same Binance endpoint format:
+```
+wss://stream.binance.com:443/ws/{symbol}@aggTrade
+```
+
+The symbol should be lowercase (e.g., `btcusdt`, `ethusdt`, `bnbusdt`).
 
 ## Project Structure
 
@@ -327,7 +473,9 @@ ApexLOB-Optimized-Order-Book-Signal-Monitor/
 
 ### Changing the Trading Pair
 
-To monitor a different trading pair, edit `main.cpp` and change the WebSocket URL:
+#### C++ Implementation
+
+Edit `main.cpp` and change the WebSocket URL:
 
 ```cpp
 std::string url = "wss://stream.binance.com:443/ws/btcusdt@aggTrade";
@@ -338,16 +486,32 @@ For example, for ETH/USDT:
 std::string url = "wss://stream.binance.com:443/ws/ethusdt@aggTrade";
 ```
 
+#### Python Implementation
+
+Edit `main.py` and modify the symbol parameter in the `main()` function:
+
+```python
+# Change this line:
+client = BinanceWebSocketClient(symbol="btcusdt")
+
+# For example, for ETH/USDT:
+client = BinanceWebSocketClient(symbol="ethusdt")
+```
+
 ### WebSocket Endpoint
 
-The program connects to Binance's aggregated trade stream on port 443 (standard HTTPS port). The endpoint format is:
+Both implementations connect to Binance's aggregated trade stream on port 443 (standard HTTPS port). The endpoint format is:
 ```
 wss://stream.binance.com:443/ws/{symbol}@aggTrade
 ```
 
+**Symbol format:** Use lowercase symbol names (e.g., `btcusdt`, `ethusdt`, `bnbusdt`)
+
 ## Troubleshooting
 
-### Build Issues
+### C++ Implementation Issues
+
+#### Build Issues
 
 **Problem:** CMake cannot find dependencies
 ```bash
@@ -363,7 +527,18 @@ ls -la lib/ixwebsocket/include/ixwebsocket/IXWebSocket.h
 ls -la lib/ixwebsocket/lib/libixwebsocket.a
 ```
 
-### Connection Issues
+**Problem:** Compilation errors
+```bash
+# Solution: Ensure you have a C++17 compatible compiler
+clang++ --version  # Should show C++17 support
+# Or rebuild from scratch
+cd build
+rm -rf *
+cmake ..
+make
+```
+
+#### Connection Issues
 
 **Problem:** "TLS support is not enabled"
 - Solution: Ensure OpenSSL is installed: `brew install openssl`
@@ -379,7 +554,7 @@ ls -la lib/ixwebsocket/lib/libixwebsocket.a
 - Check if your network blocks WebSocket connections
 - Try using port 9443 as an alternative (edit URL in main.cpp)
 
-### Runtime Issues
+#### Runtime Issues
 
 **Problem:** No data received
 - Solution: Wait a few seconds for trades to arrive
@@ -389,6 +564,99 @@ ls -la lib/ixwebsocket/lib/libixwebsocket.a
 **Problem:** Program exits immediately
 - Solution: Check error messages for connection failures
 - Ensure all dependencies are correctly linked
+
+### Python Implementation Issues
+
+#### Installation Issues
+
+**Problem:** `pip3: command not found`
+```bash
+# Solution: Install pip if not available
+# macOS (using Homebrew)
+brew install python3
+
+# Or use ensurepip
+python3 -m ensurepip --upgrade
+```
+
+**Problem:** Permission denied when installing packages
+```bash
+# Solution 1: Use --user flag
+pip3 install --user -r requirements.txt
+
+# Solution 2: Use virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Problem:** `websocket-client` installation fails
+```bash
+# Solution: Try upgrading pip first
+pip3 install --upgrade pip
+pip3 install websocket-client>=1.6.0
+
+# Or use pip install instead of pip3
+pip install websocket-client>=1.6.0
+```
+
+#### Runtime Issues
+
+**Problem:** `ModuleNotFoundError: No module named 'websocket'`
+```bash
+# Solution: Install the websocket-client package
+pip3 install websocket-client
+
+# Or use requirements.txt
+pip3 install -r requirements.txt
+```
+
+**Problem:** `ImportError` or syntax errors
+```bash
+# Solution: Ensure Python 3.7+ is being used
+python3 --version  # Should be 3.7 or higher
+
+# Try running with explicit python3
+python3 main.py
+```
+
+**Problem:** No data received (Python)
+- Solution: Wait a few seconds for trades to arrive
+- Check that Binance API is operational
+- Verify the trading pair symbol is correct (lowercase, e.g., "btcusdt")
+- Check internet connection and firewall settings
+
+**Problem:** Connection errors or SSL issues
+```bash
+# Solution: Check if you can access Binance API
+curl -I https://stream.binance.com:443
+
+# If SSL errors occur, the Python implementation uses cert_reqs=0
+# This should work on most systems, but check firewall/proxy settings
+```
+
+**Problem:** Program exits with error
+- Solution: Check the error message for specific issues
+- Ensure all dependencies are installed correctly
+- Verify Python version compatibility (3.7+)
+- Check that the symbol name is correct
+
+### Common Issues (Both Implementations)
+
+**Problem:** No trades appearing
+- Solution: Check that the market is active (trades occur during market hours)
+- Verify the symbol is correct and trading is active
+- Check Binance API status: https://www.binance.com/en/support/announcement
+
+**Problem:** Connection drops frequently
+- Solution: Check network stability
+- Ensure firewall/proxy isn't interfering
+- Both implementations include automatic reconnection handling
+
+**Problem:** High CPU usage
+- Solution: This is normal for real-time data processing
+- C++ version will use less CPU than Python
+- Consider running during off-peak hours for testing
 
 ## Technical Details
 
