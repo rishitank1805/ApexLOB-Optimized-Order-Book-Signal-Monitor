@@ -44,11 +44,17 @@ find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
-# 4. Create the executable
+# 4. Create the main executable
 add_executable(TradingEngine main.cpp)
 
-# 5. Link everything
+# 5. Create test executables
+add_executable(test_alpha_signal test_alpha_signal.cpp)
+add_executable(test_orderbook test_orderbook.cpp)
+
+# 6. Link everything
 target_include_directories(TradingEngine PRIVATE ${IXWEBSOCKET_INCLUDE_DIR})
+target_include_directories(test_alpha_signal PRIVATE ${IXWEBSOCKET_INCLUDE_DIR})
+target_include_directories(test_orderbook PRIVATE ${IXWEBSOCKET_INCLUDE_DIR})
 
 # Find required frameworks for macOS TLS support (SecureTransport)
 if(APPLE)
@@ -80,3 +86,8 @@ if(APPLE)
         target_link_libraries(TradingEngine PRIVATE ${COREFOUNDATION_FRAMEWORK})
     endif()
 endif()
+
+# Enable testing
+enable_testing()
+add_test(NAME AlphaSignalGeneratorTests COMMAND test_alpha_signal)
+add_test(NAME OrderBookTests COMMAND test_orderbook)
