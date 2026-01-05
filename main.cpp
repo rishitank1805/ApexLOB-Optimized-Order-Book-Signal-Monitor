@@ -1,4 +1,5 @@
 #include "OrderBook.h"
+#include "AlphaSignalGenerator.h"
 #include <ixwebsocket/IXWebSocket.h>
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXSocketTLSOptions.h>
@@ -10,6 +11,7 @@
 #include <exception>
 #include <iomanip>
 #include <sstream>
+#include <numeric>
 
 using json = nlohmann::json;
 
@@ -36,7 +38,48 @@ struct TimingStats {
     std::mutex mtx;
 } timing_stats;
 
-void startLiveFeed(OrderBook& ob) {
+void displayMetricsWithSignals(OrderBook& ob, AlphaSignalGenerator& signalGen, 
+                                double processingTimeMs, int totalMessages, 
+                                double totalProcessingTimeMs) {
+    // Get current metrics
+    double lastPrice = ob.getLastTradePrice();
+    double vwap = ob.getVWAP();
+    uint32_t volume = ob.getTotalVolume();
+    
+    // Update signal generator with latest data
+    if (lastPrice > 0.0) {
+        signalGen.updatePrice(lastPrice, volume, vwap);
+    }
+    
+    // Generate alpha signal
+    AlphaSignal signal = signalGen.generateSignal();
+    
+    // Display metrics
+    double avgProcessingTime = (totalMessages > 0) ? (totalProcessingTimeMs / totalMessages) : 0.0;
+    
+    std::cout << "\r[LOB] Last: " << std::fixed << std::setprecision(2) << lastPrice 
+              << " | VWAP: " << vwap << " | Vol: " << volume;
+    
+    if (totalMessages > 0) {
+        std::cout << " | Msg: " << totalMessages 
+                  << " | AvgProc: " << std::setprecision(3) << avgProcessingTime << "ms";
+    }
+    
+    // Display alpha signal
+    if (signalGen.getHistorySize() >= 31) { // Need enough data for indicators
+        std::cout << " | [ALPHA] " << signalGen.signalToString(signal.signal)
+                  << " (" << std::setprecision(1) << (signal.strength * 100) << "%)"
+                  << " | RSI: " << std::setprecision(1) << signal.rsi
+                  << " | Mom: " << std::setprecision(2) << signal.momentum << "%"
+                  << " | " << signal.reason;
+    } else {
+        std::cout << " | [ALPHA] Collecting data... (" << signalGen.getHistorySize() << "/31)";
+    }
+    
+    std::cout << std::flush;
+}
+
+void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
     // Initialize network system (required for Windows)
     ix::initNetSystem();
 
@@ -66,7 +109,7 @@ void startLiveFeed(OrderBook& ob) {
     webSocket.setPingInterval(30);
 
     // Add error handling
-    webSocket.setOnMessageCallback([&ob](const ix::WebSocketMessagePtr& msg) {
+    webSocket.setOnMessageCallback([&ob, &signalGen](const ix::WebSocketMessagePtr& msg) {
         if (msg->type == ix::WebSocketMessageType::Message) {
             auto msg_start = std::chrono::high_resolution_clock::now();
             
@@ -118,8 +161,10 @@ void startLiveFeed(OrderBook& ob) {
                     timing_stats.total_processing_time_ms += processing_time_ms;
                 }
                 
-                ob.displayMetrics(processing_time_ms, timing_stats.total_messages, 
-                                 timing_stats.total_processing_time_ms);
+                // Display metrics with alpha signals
+                displayMetricsWithSignals(ob, signalGen, processing_time_ms, 
+                                         timing_stats.total_messages, 
+                                         timing_stats.total_processing_time_ms);
             } catch (const json::parse_error& e) {
                 std::cerr << "[" << getCurrentTimeString() << "] [ERROR] JSON parse error: " << e.what() << std::endl;
             } catch (const json::type_error& e) {
@@ -177,7 +222,14 @@ void startLiveFeed(OrderBook& ob) {
 
 int main() {
     OrderBook ob;
+    AlphaSignalGenerator signalGen;
+    
     std::cout << "Connecting to Binance BTC/USDT Live Feed..." << std::endl;
-    startLiveFeed(ob);
+    std::cout << "Alpha Signal Generation: ENABLED" << std::endl;
+    std::cout << "Indicators: SMA(10/30), RSI(14), Momentum(10), Volatility(20)" << std::endl;
+    std::cout << "Signal Types: STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL" << std::endl;
+    std::cout << std::endl;
+    
+    startLiveFeed(ob, signalGen);
     return 0;
 }

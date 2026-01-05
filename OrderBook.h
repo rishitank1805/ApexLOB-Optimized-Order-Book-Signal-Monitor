@@ -63,6 +63,26 @@ private:
     }
 
 public:
+    // Get current metrics (thread-safe)
+    double getLastTradePrice() const {
+        std::lock_guard<std::mutex> lock(mtx);
+        return lastTradePrice;
+    }
+    
+    double getVWAP() const {
+        std::lock_guard<std::mutex> lock(mtx);
+        return (totalVolumeTraded > 0) ? (cumulativeNotional / totalVolumeTraded) : 0.0;
+    }
+    
+    uint32_t getTotalVolume() const {
+        std::lock_guard<std::mutex> lock(mtx);
+        return totalVolumeTraded;
+    }
+    
+    double getCumulativeNotional() const {
+        std::lock_guard<std::mutex> lock(mtx);
+        return cumulativeNotional;
+    }
     void displayMetrics(double processingTimeMs = 0.0, int totalMessages = 0, double totalProcessingTimeMs = 0.0) const {
         std::lock_guard<std::mutex> lock(mtx);
         double vwap = (totalVolumeTraded > 0) ? (cumulativeNotional / totalVolumeTraded) : 0;
