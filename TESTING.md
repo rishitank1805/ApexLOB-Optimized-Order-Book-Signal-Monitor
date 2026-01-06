@@ -18,13 +18,16 @@ The project uses a custom lightweight test framework (`test_utils.h`) that provi
 # From project root
 cd build
 cmake ..
-make test_alpha_signal test_orderbook
+make test_alpha_signal test_orderbook test_edge_cases
 
 # Run AlphaSignalGenerator tests
 ./test_alpha_signal
 
 # Run OrderBook tests
 ./test_orderbook
+
+# Run Edge Case tests
+./test_edge_cases
 ```
 
 ### Using the Test Runner Script
@@ -98,27 +101,65 @@ ctest --verbose
    - Concurrent read operations
    - Metric consistency
 
+### Edge Case Tests (`test_edge_cases.cpp`)
+
+**54 test cases** covering edge cases and boundary conditions:
+
+#### AlphaSignalGenerator Edge Cases (11 tests)
+- Empty history handling
+- Single price point
+- Constant prices (no variation)
+- Extreme price movements
+- RSI boundary conditions (0, 100)
+- Very high volatility scenarios
+- Rapid price changes
+- Zero price handling
+- Very large price values
+- History overflow protection
+- Alternating price patterns
+
+#### OrderBook Edge Cases (13 tests)
+- Zero quantity orders
+- Multiple orders at same price
+- Exact quantity matches
+- Very large quantities
+- Multiple price level matches
+- Various no-match scenarios
+- VWAP with zero volume
+- Consecutive trades
+- Price precision handling
+- Empty book operations
+- Single-side order book
+- Remaining quantity after partial match
+
 ## Test Results
+
+### Test Statistics
+
+- **AlphaSignalGenerator Tests**: 21/21 passing
+- **OrderBook Tests**: 23/23 passing
+- **Edge Case Tests**: 54/54 passing
+- **Total**: 98/98 tests passing
 
 ### Expected Output
 
 ```
 ========================================
-AlphaSignalGenerator Test Suite
+Edge Cases Test Suite
 ========================================
 
-=== Testing AlphaSignalGenerator Basic Functionality ===
-✓ Initial history size should be 0
-✓ Signal should be HOLD with no data
-✓ Signal strength should be 0 with no data
+=== Testing Empty History Edge Cases ===
+✓ Empty history should return HOLD
+✓ Empty history should have 0 strength
+✓ Empty history should have 0 price
 
 ...
 
 ============================================================
 Test Summary
 ============================================================
-Total Tests: 21
-Passed: 21
+Total Tests: 54
+Passed: 54
 Failed: 0
 ============================================================
 All tests passed! ✓
@@ -191,6 +232,7 @@ fi
 
 - ✅ AlphaSignalGenerator: All core functionality tested
 - ✅ OrderBook: All matching and metric calculations tested
+- ✅ Edge Cases: Comprehensive edge case and boundary condition testing
 - ⚠️ Integration tests: Not yet implemented (future work)
 - ⚠️ Performance tests: Not yet implemented (future work)
 

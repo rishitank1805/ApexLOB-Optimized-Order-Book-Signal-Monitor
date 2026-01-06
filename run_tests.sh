@@ -10,7 +10,7 @@ echo ""
 echo "Building tests..."
 cd build
 cmake .. > /dev/null 2>&1
-make test_alpha_signal test_orderbook
+make test_alpha_signal test_orderbook test_edge_cases
 
 if [ $? -ne 0 ]; then
     echo "Error: Failed to build tests"
@@ -33,10 +33,17 @@ ORDERBOOK_EXIT=$?
 
 echo ""
 echo "=========================================="
+echo "Running Edge Case Tests"
+echo "=========================================="
+./test_edge_cases
+EDGE_EXIT=$?
+
+echo ""
+echo "=========================================="
 echo "Test Summary"
 echo "=========================================="
 
-if [ $ALPHA_EXIT -eq 0 ] && [ $ORDERBOOK_EXIT -eq 0 ]; then
+if [ $ALPHA_EXIT -eq 0 ] && [ $ORDERBOOK_EXIT -eq 0 ] && [ $EDGE_EXIT -eq 0 ]; then
     echo "All tests passed! ✓"
     exit 0
 else
