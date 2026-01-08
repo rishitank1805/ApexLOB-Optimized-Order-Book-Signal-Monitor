@@ -2,6 +2,7 @@
 #define ORDERBOOK_H
 
 #include "Order.h"
+#include "Logger.h"
 #include <map>
 #include <mutex>
 #include <iomanip>
@@ -31,6 +32,7 @@ public:
 private:
     template <typename T>
     void matchOrder(std::shared_ptr<Order> order, T& oppositeSide) {
+        uint32_t initialQty = order->quantity;
         auto it = oppositeSide.begin();
         while (it != oppositeSide.end() && order->quantity > 0) {
             bool canMatch = (order->side == Side::Buy) ? (order->price >= it->first) : (order->price <= it->first);
@@ -51,6 +53,13 @@ private:
             }
             if (level.orders.empty()) it = oppositeSide.erase(it);
             else ++it;
+        }
+        
+        // Log trade execution
+        if (initialQty != order->quantity) {
+            uint32_t matchedQty = initialQty - order->quantity;
+            LOG_DEBUG("Trade executed: " + std::to_string(matchedQty) + " units at " + 
+                     std::to_string(lastTradePrice) + ", Remaining: " + std::to_string(order->quantity));
         }
     }
 

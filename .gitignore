@@ -12,3 +12,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.user
+
+# Ignore log files
+*.log
+apexlob.log

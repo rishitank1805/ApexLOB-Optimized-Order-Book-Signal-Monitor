@@ -1,6 +1,7 @@
 #ifndef ALPHASIGNALGENERATOR_H
 #define ALPHASIGNALGENERATOR_H
 
+#include "Logger.h"
 #include <deque>
 #include <vector>
 #include <cmath>
@@ -190,6 +191,7 @@ public:
             priceHistory.pop_front();
             volumeHistory.pop_front();
             vwapHistory.pop_front();
+            LOG_DEBUG("Price history overflow, maintaining MAX_HISTORY limit");
         }
     }
     
@@ -203,6 +205,8 @@ public:
         
         // Need minimum data for indicators
         if (priceHistory.size() < LONG_MA_PERIOD + 1) {
+            LOG_DEBUG("Insufficient data for signal generation: " + std::to_string(priceHistory.size()) + 
+                     " < " + std::to_string(LONG_MA_PERIOD + 1));
             return signal;
         }
         
@@ -224,6 +228,14 @@ public:
         signal.rsi = rsi;
         signal.momentum = momentum;
         signal.volatility = volatility;
+        
+        // Log signal generation for strong signals
+        if (signal.signal == SignalType::STRONG_BUY || signal.signal == SignalType::STRONG_SELL) {
+            LOG_DEBUG("Strong signal generated: " + signalToString(signal.signal) + 
+                     " | RSI: " + std::to_string(rsi) + 
+                     " | Momentum: " + std::to_string(momentum) + "%" +
+                     " | Volatility: " + std::to_string(volatility) + "%");
+        }
         
         return signal;
     }

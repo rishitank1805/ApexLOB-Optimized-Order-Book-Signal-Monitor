@@ -1,5 +1,6 @@
 #include "OrderBook.h"
 #include "AlphaSignalGenerator.h"
+#include "Logger.h"
 #include <ixwebsocket/IXWebSocket.h>
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXSocketTLSOptions.h>
@@ -49,6 +50,8 @@ void displayMetricsWithSignals(OrderBook& ob, AlphaSignalGenerator& signalGen,
     // Update signal generator with latest data
     if (lastPrice > 0.0) {
         signalGen.updatePrice(lastPrice, volume, vwap);
+        LOG_DEBUG("Updated signal generator: Price=" + std::to_string(lastPrice) + 
+                  ", Volume=" + std::to_string(volume) + ", VWAP=" + std::to_string(vwap));
     }
     
     // Generate alpha signal
@@ -72,6 +75,13 @@ void displayMetricsWithSignals(OrderBook& ob, AlphaSignalGenerator& signalGen,
                   << " | RSI: " << std::setprecision(1) << signal.rsi
                   << " | Mom: " << std::setprecision(2) << signal.momentum << "%"
                   << " | " << signal.reason;
+        
+        // Log signal generation
+        if (signal.signal == SignalType::STRONG_BUY || signal.signal == SignalType::STRONG_SELL) {
+            LOG_INFO("Strong signal generated: " + signalGen.signalToString(signal.signal) + 
+                     " (Strength: " + std::to_string(signal.strength * 100) + "%, RSI: " + 
+                     std::to_string(signal.rsi) + ")");
+        }
     } else {
         std::cout << " | [ALPHA] Collecting data... (" << signalGen.getHistorySize() << "/31)";
     }
@@ -80,6 +90,8 @@ void displayMetricsWithSignals(OrderBook& ob, AlphaSignalGenerator& signalGen,
 }
 
 void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
+    LOG_INFO("Initializing WebSocket connection to Binance");
+    
     // Initialize network system (required for Windows)
     ix::initNetSystem();
 
@@ -90,6 +102,7 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
     // Use port 443 instead of 9443 - more reliable and less likely to be blocked
     std::string url = "wss://stream.binance.com:443/ws/btcusdt@aggTrade";
     webSocket.setUrl(url);
+    LOG_DEBUG("WebSocket URL configured: " + url);
     
     // Configure TLS options - use system default CA certificates
     ix::SocketTLSOptions tlsOptions;
@@ -123,6 +136,7 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
                         msg_start - timing_stats.connection_start).count();
                     std::cout << "\n[" << getCurrentTimeString() << "] [INFO] First message received in " 
                               << connection_time << "ms" << std::endl;
+                    LOG_INFO("First message received in " + std::to_string(connection_time) + "ms");
                 }
             }
             
@@ -131,7 +145,7 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
                 
                 // Validate required fields exist
                 if (!j.contains("p") || !j.contains("q") || !j.contains("m") || !j.contains("a")) {
-                    std::cerr << "[" << getCurrentTimeString() << "] [WARNING] Missing required fields in message" << std::endl;
+                    LOG_WARNING("Missing required fields in message: " + msg->str);
                     return;
                 }
                 
@@ -139,9 +153,15 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
                 double price = std::stod(j["p"].get<std::string>());
                 double quantity = std::stod(j["q"].get<std::string>());
                 bool isSell = j["m"].get<bool>(); 
+                uint64_t tradeId = j["a"].get<uint64_t>();
+                
+                LOG_DEBUG("Processing trade: ID=" + std::to_string(tradeId) + 
+                         ", Price=" + std::to_string(price) + 
+                         ", Quantity=" + std::to_string(quantity) + 
+                         ", Side=" + (isSell ? "SELL" : "BUY"));
                 
                 auto order = std::make_shared<Order>(
-                    j["a"].get<uint64_t>(), // Aggregate trade ID
+                    tradeId, // Aggregate trade ID
                     price, 
                     static_cast<uint32_t>(quantity * 1000), // Scale for integer qty
                     isSell ? Side::Sell : Side::Buy
@@ -166,20 +186,21 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
                                          timing_stats.total_messages, 
                                          timing_stats.total_processing_time_ms);
             } catch (const json::parse_error& e) {
-                std::cerr << "[" << getCurrentTimeString() << "] [ERROR] JSON parse error: " << e.what() << std::endl;
+                LOG_ERROR("JSON parse error: " + std::string(e.what()));
             } catch (const json::type_error& e) {
-                std::cerr << "[" << getCurrentTimeString() << "] [ERROR] JSON type error: " << e.what() << std::endl;
+                LOG_ERROR("JSON type error: " + std::string(e.what()));
             } catch (const std::exception& e) {
-                std::cerr << "[" << getCurrentTimeString() << "] [ERROR] Error processing message: " << e.what() << std::endl;
+                LOG_ERROR("Error processing message: " + std::string(e.what()));
             }
         } else if (msg->type == ix::WebSocketMessageType::Error) {
-            std::cerr << "[" << getCurrentTimeString() << "] [ERROR] WebSocket error: " << msg->errorInfo.reason << std::endl;
+            LOG_ERROR("WebSocket error: " + msg->errorInfo.reason);
         } else if (msg->type == ix::WebSocketMessageType::Open) {
             auto open_time = std::chrono::high_resolution_clock::now();
             auto connection_time = std::chrono::duration_cast<std::chrono::milliseconds>(
                 open_time - timing_stats.connection_start).count();
             std::cout << "[" << getCurrentTimeString() << "] [INFO] Connected to Binance WebSocket" << std::endl;
             std::cout << "[INFO] Connection established in " << connection_time << "ms" << std::endl;
+            LOG_INFO("WebSocket connection established in " + std::to_string(connection_time) + "ms");
         } else if (msg->type == ix::WebSocketMessageType::Close) {
             auto duration = std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::high_resolution_clock::now() - timing_stats.connection_start).count();
@@ -194,11 +215,15 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
                 std::cout << "[INFO] Average processing time: " << std::setprecision(3) 
                           << (timing_stats.total_processing_time_ms / timing_stats.total_messages) << " ms" << std::endl;
             }
+            LOG_INFO("WebSocket connection closed. Duration: " + std::to_string(duration) + 
+                    "s, Messages: " + std::to_string(timing_stats.total_messages) + 
+                    ", Throughput: " + std::to_string(msgs_per_sec) + " msg/s");
         }
     });
 
     // Use blocking connect method for more reliable connection
     std::cout << "Connecting to Binance WebSocket..." << std::endl;
+    LOG_INFO("Attempting WebSocket connection to Binance (60s timeout)");
     auto connect_start = std::chrono::high_resolution_clock::now();
     auto result = webSocket.connect(60);  // 60 second timeout
     
@@ -207,11 +232,14 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
         if (result.http_status != 0) {
             std::cerr << "HTTP Status Code: " << result.http_status << std::endl;
         }
+        LOG_ERROR("WebSocket connection failed: " + result.errorStr + 
+                 (result.http_status != 0 ? " (HTTP " + std::to_string(result.http_status) + ")" : ""));
         ix::uninitNetSystem();
         return;
     }
     
     std::cout << "Connected successfully! Waiting for data..." << std::endl;
+    LOG_INFO("WebSocket connected successfully, waiting for trade data");
     
     // Run the WebSocket in the current thread
     webSocket.run();
@@ -221,6 +249,16 @@ void startLiveFeed(OrderBook& ob, AlphaSignalGenerator& signalGen) {
 }
 
 int main() {
+    // Initialize logger
+    Logger* logger = Logger::getInstance();
+    logger->setLogLevel(LogLevel::INFO); // Set to DEBUG for more verbose logging
+    logger->enableFileLogging("apexlob.log"); // Optional: enable file logging
+    
+    LOG_INFO("=== ApexLOB Trading Engine Starting ===");
+    LOG_INFO("Alpha Signal Generation: ENABLED");
+    LOG_INFO("Indicators: SMA(10/30), RSI(14), Momentum(10), Volatility(20)");
+    LOG_INFO("Signal Types: STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL");
+    
     OrderBook ob;
     AlphaSignalGenerator signalGen;
     
@@ -228,8 +266,11 @@ int main() {
     std::cout << "Alpha Signal Generation: ENABLED" << std::endl;
     std::cout << "Indicators: SMA(10/30), RSI(14), Momentum(10), Volatility(20)" << std::endl;
     std::cout << "Signal Types: STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL" << std::endl;
+    std::cout << "Logging to: apexlob.log" << std::endl;
     std::cout << std::endl;
     
     startLiveFeed(ob, signalGen);
+    
+    LOG_INFO("=== ApexLOB Trading Engine Shutting Down ===");
     return 0;
 }
