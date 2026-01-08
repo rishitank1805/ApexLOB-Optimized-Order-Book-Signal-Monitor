@@ -137,17 +137,31 @@ void testOrderBookNoMatch() {
     
     OrderBook ob;
     
+    // Test 1: Sell order price too high to match buy
     // Add a buy order at 100.0
     auto buyOrder = std::make_shared<Order>(1, 100.0, 1000, Side::Buy);
     ob.submitOrder(buyOrder);
     
-    // Add a sell order at 101.0 (too high, shouldn't match)
+    // Add a sell order at 101.0 (sell price > buy price, shouldn't match)
     auto sellOrder = std::make_shared<Order>(2, 101.0, 500, Side::Sell);
     ob.submitOrder(sellOrder);
     
-    // No trade should occur
-    TestRunner::assertEquals(0.0, ob.getLastTradePrice(), "No trade should occur");
+    // No trade should occur - sell at 101 > buy at 100
+    TestRunner::assertEquals(0.0, ob.getLastTradePrice(), "No trade: sell price (101) > buy price (100)");
     TestRunner::assertEquals(0U, ob.getTotalVolume(), "No volume should be traded");
+    
+    // Test 2: Buy order price too low to match sell
+    OrderBook ob2;
+    auto sellOrder2 = std::make_shared<Order>(1, 100.0, 1000, Side::Sell);
+    ob2.submitOrder(sellOrder2);
+    
+    // Add a buy order at 99.0 (buy price < sell price, shouldn't match)
+    auto buyOrder2 = std::make_shared<Order>(2, 99.0, 500, Side::Buy);
+    ob2.submitOrder(buyOrder2);
+    
+    // No trade should occur - buy at 99 < sell at 100
+    TestRunner::assertEquals(0.0, ob2.getLastTradePrice(), "No trade: buy price (99) < sell price (100)");
+    TestRunner::assertEquals(0U, ob2.getTotalVolume(), "No volume should be traded");
 }
 
 void testOrderBookPricePriority() {
@@ -156,18 +170,21 @@ void testOrderBookPricePriority() {
     OrderBook ob;
     
     // Add buy orders at different prices (best bid first)
+    // Bids are stored highest first (std::greater), so 101.0 is best bid
     auto buyOrder1 = std::make_shared<Order>(1, 101.0, 500, Side::Buy);
     auto buyOrder2 = std::make_shared<Order>(2, 100.0, 500, Side::Buy);
     ob.submitOrder(buyOrder1);
     ob.submitOrder(buyOrder2);
     
-    // Add sell order that should match best bid first
+    // Add sell order that should match best bid first (101.0)
+    // Sell at 99.0 can match buy at 101.0 (99 <= 101)
     auto sellOrder = std::make_shared<Order>(3, 99.0, 300, Side::Sell);
     ob.submitOrder(sellOrder);
     
-    // Should match at best bid price (101.0)
-    TestRunner::assertEquals(101.0, ob.getLastTradePrice(), "Should match at best bid price");
+    // Should match at best bid price (101.0) - matches at limit level price
+    TestRunner::assertEquals(101.0, ob.getLastTradePrice(), "Should match at best bid price (101.0)");
     TestRunner::assertEquals(300U, ob.getTotalVolume(), "Volume should be 300");
+    TestRunner::assertEquals(101.0, ob.getVWAP(), "VWAP should be 101.0 (all at best bid)");
 }
 
 void testOrderBookThreadSafety() {

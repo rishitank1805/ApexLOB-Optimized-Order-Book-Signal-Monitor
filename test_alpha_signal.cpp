@@ -164,14 +164,14 @@ void testAlphaSignalGeneratorStrongSell() {
     std::vector<double> prices;
     double basePrice = 100.0;
     
-    // First create a strong rally (overbought)
-    for (int i = 0; i < 25; ++i) {
-        prices.push_back(basePrice + i * 1.0);
+    // First create a strong rally (overbought) - need enough for RSI
+    for (int i = 0; i < 20; ++i) {
+        prices.push_back(basePrice + i * 1.5);
     }
     
-    // Then strong decline (momentum + MA crossover)
-    for (int i = 0; i < 10; ++i) {
-        prices.push_back(basePrice + 25 * 1.0 - i * 2.0); // Strong decline
+    // Then strong decline (momentum + MA crossover) - need enough for indicators
+    for (int i = 0; i < 15; ++i) {
+        prices.push_back(basePrice + 20 * 1.5 - i * 2.5); // Strong decline
     }
     
     for (double price : prices) {
@@ -180,13 +180,13 @@ void testAlphaSignalGeneratorStrongSell() {
     
     AlphaSignal signal = generator.generateSignal();
     
-    // Should generate a sell signal (may be HOLD if volatility filter reduces score)
-    // Check that RSI is high (overbought) or momentum is negative
-    bool hasSellCharacteristics = (signal.rsi > 60.0) || (signal.momentum < 0.0) || 
-                                   (signal.signal == SignalType::SELL || 
-                                    signal.signal == SignalType::STRONG_SELL);
-    TestRunner::assertTrue(hasSellCharacteristics, 
-                           "Should show sell characteristics (high RSI, negative momentum, or SELL signal)");
+    // Verify the scenario created the expected conditions
+    TestRunner::assertTrue(signal.momentum < 0.0, "Declining prices should show negative momentum");
+    // RSI might still be high from the rally, or signal should be SELL/STRONG_SELL
+    bool isSellSignal = (signal.signal == SignalType::SELL || signal.signal == SignalType::STRONG_SELL);
+    bool hasSellIndicators = (signal.rsi > 60.0) || (signal.momentum < -2.0);
+    TestRunner::assertTrue(isSellSignal || hasSellIndicators, 
+                           "Should generate SELL signal or show sell indicators (high RSI or strong negative momentum)");
 }
 
 void testAlphaSignalGeneratorHistoryLimit() {

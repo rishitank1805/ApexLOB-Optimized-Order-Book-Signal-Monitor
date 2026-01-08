@@ -318,26 +318,35 @@ void testOrderBookMultipleLevelMatches() {
 void testOrderBookNoMatchScenarios() {
     std::cout << "\n=== Testing Various No-Match Scenarios ===" << std::endl;
     
-    OrderBook ob;
+    // Scenario 1: Sell order price higher than buy order price
+    OrderBook ob1;
+    auto buyOrder1 = std::make_shared<Order>(1, 100.0, 500, Side::Buy);
+    ob1.submitOrder(buyOrder1);
+    auto sellOrder1 = std::make_shared<Order>(2, 101.0, 500, Side::Sell);
+    ob1.submitOrder(sellOrder1);
+    // Sell at 101 > Buy at 100, no match
+    TestRunner::assertEquals(0.0, ob1.getLastTradePrice(), "Should not match: sell (101) > buy (100)");
+    TestRunner::assertEquals(0U, ob1.getTotalVolume(), "No volume traded");
     
-    // Buy order too low
-    auto buyOrder = std::make_shared<Order>(1, 100.0, 500, Side::Buy);
-    ob.submitOrder(buyOrder);
-    
-    auto sellOrder = std::make_shared<Order>(2, 101.0, 500, Side::Sell);
-    ob.submitOrder(sellOrder);
-    
-    TestRunner::assertEquals(0.0, ob.getLastTradePrice(), "Should not match (sell too high)");
-    
-    // Reset and test opposite
+    // Scenario 2: Buy order price lower than sell order price
     OrderBook ob2;
     auto sellOrder2 = std::make_shared<Order>(1, 100.0, 500, Side::Sell);
     ob2.submitOrder(sellOrder2);
-    
     auto buyOrder2 = std::make_shared<Order>(2, 99.0, 500, Side::Buy);
     ob2.submitOrder(buyOrder2);
+    // Buy at 99 < Sell at 100, no match
+    TestRunner::assertEquals(0.0, ob2.getLastTradePrice(), "Should not match: buy (99) < sell (100)");
+    TestRunner::assertEquals(0U, ob2.getTotalVolume(), "No volume traded");
     
-    TestRunner::assertEquals(0.0, ob2.getLastTradePrice(), "Should not match (buy too low)");
+    // Scenario 3: Equal prices should match (boundary case)
+    OrderBook ob3;
+    auto buyOrder3 = std::make_shared<Order>(1, 100.0, 500, Side::Buy);
+    ob3.submitOrder(buyOrder3);
+    auto sellOrder3 = std::make_shared<Order>(2, 100.0, 500, Side::Sell);
+    ob3.submitOrder(sellOrder3);
+    // Buy at 100 == Sell at 100, should match
+    TestRunner::assertEquals(100.0, ob3.getLastTradePrice(), "Should match at equal prices (100 == 100)");
+    TestRunner::assertEquals(500U, ob3.getTotalVolume(), "Volume should match");
 }
 
 void testOrderBookVWAPWithZeroVolume() {
@@ -433,19 +442,30 @@ void testOrderBookRemainingQuantity() {
     auto buyOrder = std::make_shared<Order>(1, 100.0, 1000, Side::Buy);
     ob.submitOrder(buyOrder);
     
-    auto sellOrder = std::make_shared<Order>(2, 99.0, 300, Side::Sell);
-    ob.submitOrder(sellOrder);
+    // First sell order - partial match
+    auto sellOrder1 = std::make_shared<Order>(2, 99.0, 300, Side::Sell);
+    ob.submitOrder(sellOrder1);
     
     // Should match 300, leaving 700 in buy order
-    TestRunner::assertEquals(300U, ob.getTotalVolume(), "Should match 300");
+    TestRunner::assertEquals(300U, ob.getTotalVolume(), "First match: 300 units");
     TestRunner::assertEquals(100.0, ob.getLastTradePrice(), "Last price should be 100.0");
+    TestRunner::assertEquals(100.0, ob.getVWAP(), "VWAP should be 100.0");
     
-    // Remaining buy order should still be in book (can't directly test, but no crash)
-    // Add another sell to verify
+    // Remaining buy order should still be in book - verify by matching more
     auto sellOrder2 = std::make_shared<Order>(3, 99.0, 200, Side::Sell);
     ob.submitOrder(sellOrder2);
     
-    TestRunner::assertEquals(500U, ob.getTotalVolume(), "Should match additional 200");
+    // Should match additional 200 from remaining buy order
+    TestRunner::assertEquals(500U, ob.getTotalVolume(), "Total after second match: 500 units");
+    TestRunner::assertEquals(100.0, ob.getLastTradePrice(), "Last price still 100.0");
+    TestRunner::assertEquals(100.0, ob.getVWAP(), "VWAP should still be 100.0 (all at same price)");
+    
+    // Match remaining 500
+    auto sellOrder3 = std::make_shared<Order>(4, 99.0, 500, Side::Sell);
+    ob.submitOrder(sellOrder3);
+    
+    TestRunner::assertEquals(1000U, ob.getTotalVolume(), "Total after third match: 1000 units");
+    TestRunner::assertEquals(100.0, ob.getVWAP(), "VWAP should be 100.0");
 }
 
 int main() {
