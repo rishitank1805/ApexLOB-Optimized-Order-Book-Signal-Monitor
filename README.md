@@ -1,12 +1,15 @@
 # ApexLOB - Optimized Order Book Signal Monitor
 
-A high-performance C++ application that connects to Binance WebSocket API to stream live BTC/USDT trading data and maintain an optimized order book with real-time metrics.
+A high-performance C++ application that connects to Binance WebSocket API to stream live BTC/USDT trading data, maintain an optimized order book with real-time metrics, and generate alpha trading signals using advanced technical indicators.
 
 ## Features
 
 - 🔴 **Live WebSocket Connection** - Real-time connection to Binance aggregated trade stream
 - 📊 **Order Book Management** - Efficient order book implementation with bid/ask matching
 - 📈 **Real-time Metrics** - Displays Last Trade Price, VWAP (Volume Weighted Average Price), and Total Volume
+- 🎯 **Alpha Signal Generation** - Advanced technical indicators (SMA, RSI, Momentum, Volatility) with automated trading signals
+- 📝 **Comprehensive Logging** - Thread-safe logging system with configurable levels and file/console output
+- 🧪 **Extensive Test Suite** - 111+ unit tests covering core functionality and edge cases
 - 🔒 **Secure TLS Connection** - Full SSL/TLS support with OpenSSL
 - ⚡ **High Performance** - Optimized C++ implementation with efficient data structures
 
@@ -158,7 +161,7 @@ Run both side-by-side for the same duration and compare the final statistics.
 ```
 [INFO] Connection established in 234ms
 [INFO] First message received in 567ms
-[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 150 | AvgProc: 0.045ms
+[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 150 | AvgProc: 0.045ms | [ALPHA] BUY (75.2%) | RSI: 35.2 | Mom: 2.45% | MA↑ RSI_OS Mom↑
 [INFO] Total messages processed: 1245
 [INFO] Messages per second: 41.50
 [INFO] Average processing time: 0.052 ms
@@ -173,6 +176,8 @@ Run both side-by-side for the same duration and compare the final statistics.
 [INFO] Messages per second: 32.90
 [INFO] Average processing time: 0.287 ms
 ```
+
+**Note:** The C++ implementation includes alpha signal generation, which is not available in the Python version. The Python implementation focuses on basic order book functionality for comparison purposes.
 
 **Interpretation:** C++ processed **1.26x more messages** and is **5.5x faster** per message.
 
@@ -289,6 +294,21 @@ make -j$(sysctl -n hw.ncpu)
 
 The executable `TradingEngine` will be created in the `build/` directory.
 
+#### Step 5: Build Test Executables (Optional)
+
+```bash
+# Build all test executables
+make test_alpha_signal test_orderbook test_edge_cases
+
+# Or build everything
+make
+```
+
+The test executables will be created in the `build/` directory:
+- `test_alpha_signal` - AlphaSignalGenerator test suite
+- `test_orderbook` - OrderBook test suite
+- `test_edge_cases` - Edge case test suite
+
 ### Running the C++ Implementation
 
 #### Run from Build Directory
@@ -310,12 +330,22 @@ When running, you should see:
 
 ```
 Connecting to Binance BTC/USDT Live Feed...
+Alpha Signal Generation: ENABLED
+Indicators: SMA(10/30), RSI(14), Momentum(10), Volatility(20)
+Signal Types: STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL
+Logging to: apexlob.log
 Connecting to Binance WebSocket...
-Connected successfully! Waiting for data...
+[INFO] Connected to Binance WebSocket
 [INFO] Connection established in 234ms
 [INFO] First message received in 567ms
-[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 1 | AvgProc: 0.045ms
+[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 150 | AvgProc: 0.045ms | [ALPHA] BUY (75.2%) | RSI: 35.2 | Mom: 2.45% | MA↑ RSI_OS Mom↑
 ```
+
+The output shows:
+- **Real-time order book metrics** (Last Price, VWAP, Volume)
+- **Processing statistics** (Message count, Average processing time)
+- **Alpha signals** (Signal type, strength percentage, RSI, Momentum, Reason)
+- **Signal indicators** (Moving average direction, RSI status, Momentum direction)
 
 The metrics will update in real-time as trades are received from Binance.
 
@@ -456,13 +486,25 @@ ApexLOB-Optimized-Order-Book-Signal-Monitor/
 ├── main.cpp                # C++ main application entry point
 ├── main.py                 # Python implementation (for comparison)
 ├── Order.h                 # Order and LimitLevel data structures
-├── OrderBook.h             # Order book implementation
+├── OrderBook.h             # Order book implementation with matching logic
+├── AlphaSignalGenerator.h  # Alpha signal generation with technical indicators
+├── Logger.h                # Thread-safe logging system
+├── test_utils.h            # Test framework utilities
+├── test_alpha_signal.cpp   # AlphaSignalGenerator test suite (22 tests)
+├── test_orderbook.cpp      # OrderBook test suite (26 tests)
+├── test_edge_cases.cpp     # Edge case tests (63 tests)
+├── run_tests.sh            # Test runner script
 ├── README.md               # This file
+├── TESTING.md              # Testing guide and documentation
 ├── PERFORMANCE_COMPARISON.md # Detailed performance comparison guide
 ├── benchmark.sh            # Automated benchmark script
 ├── requirements.txt        # Python dependencies
+├── .gitignore              # Git ignore rules
 ├── build/                  # Build directory (generated)
-│   └── TradingEngine       # Compiled executable
+│   ├── TradingEngine       # Main executable
+│   ├── test_alpha_signal   # Alpha signal tests
+│   ├── test_orderbook      # OrderBook tests
+│   └── test_edge_cases     # Edge case tests
 └── lib/                    # Local libraries
     └── ixwebsocket/        # IXWebSocket library (headers + static lib)
         ├── include/        # Header files
@@ -658,6 +700,156 @@ curl -I https://stream.binance.com:443
 - C++ version will use less CPU than Python
 - Consider running during off-peak hours for testing
 
+**Problem:** Log file not being created
+- Solution: Check file permissions in the project directory
+- Verify the application has write permissions
+- Check disk space availability
+- Log file is created at: `./apexlob.log`
+
+**Problem:** Too many log messages (verbose output)
+- Solution: Adjust log level in `main.cpp`:
+  ```cpp
+  logger->setLogLevel(LogLevel::INFO);  // Change from DEBUG to INFO or WARNING
+  ```
+
+**Problem:** Alpha signals showing "Collecting data..."
+- Solution: This is normal - the system needs at least 31 data points before generating signals
+- Wait for more trades to arrive (typically 30-60 seconds depending on market activity)
+- Signals will appear automatically once enough data is collected
+
+## Alpha Signal Generation
+
+The C++ implementation includes an advanced alpha signal generation system that uses multiple technical indicators to generate trading signals in real-time.
+
+### Technical Indicators
+
+| Indicator | Period | Description |
+|-----------|--------|-------------|
+| **SMA Short** | 10 | Short-term Simple Moving Average |
+| **SMA Long** | 30 | Long-term Simple Moving Average |
+| **RSI** | 14 | Relative Strength Index (0-100) |
+| **Momentum** | 10 | Price change percentage over 10 periods |
+| **Volatility** | 20 | Coefficient of variation (standard deviation / mean) |
+
+### Signal Types
+
+- **STRONG_BUY** - Strong bullish signal (score ≥ 3)
+- **BUY** - Bullish signal (score ≥ 1)
+- **HOLD** - Neutral signal (score = 0)
+- **SELL** - Bearish signal (score ≤ -1)
+- **STRONG_SELL** - Strong bearish signal (score ≤ -3)
+
+### Signal Generation Logic
+
+The signal is generated using a scoring system:
+
+1. **Moving Average Crossover** (+1 if short MA > long MA, -1 otherwise)
+2. **RSI Signals** (+2 if RSI < 30 oversold, -2 if RSI > 70 overbought, +1/-1 for moderate levels)
+3. **Momentum** (+1 if momentum > 2%, -1 if momentum < -2%)
+4. **Volatility Filter** - Reduces signal strength in high volatility (>5%) scenarios
+
+### Signal Strength
+
+Signal strength (0.0 to 1.0) is calculated based on:
+- Signal type intensity
+- RSI extremes
+- Momentum magnitude
+
+### Example Output
+
+```
+[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | [ALPHA] STRONG_BUY (85.2%) | RSI: 28.5 | Mom: 3.2% | MA↑ RSI_OS Mom↑
+```
+
+- **STRONG_BUY (85.2%)** - Signal type and strength
+- **RSI: 28.5** - Oversold condition (below 30)
+- **Mom: 3.2%** - Strong positive momentum
+- **MA↑ RSI_OS Mom↑** - Indicators showing bullish conditions
+
+## Logging System
+
+The application includes a comprehensive, thread-safe logging system for debugging and monitoring.
+
+### Log Levels
+
+- **DEBUG** - Detailed debugging information (trade processing, indicator calculations)
+- **INFO** - General information (connection events, signal generation)
+- **WARNING** - Warning messages (missing fields, insufficient data)
+- **ERROR** - Error conditions (connection failures, JSON parse errors)
+- **FATAL** - Critical errors requiring shutdown
+
+### Configuration
+
+Logging is configured in `main.cpp`:
+
+```cpp
+Logger* logger = Logger::getInstance();
+logger->setLogLevel(LogLevel::INFO);  // Change to DEBUG for verbose logging
+logger->enableFileLogging("apexlob.log");  // Enable file logging
+logger->enableConsoleLogging(true);  // Enable/disable console output
+```
+
+### Log File Location
+
+By default, logs are written to `apexlob.log` in the project root directory. The log file is automatically created and appended to on each run.
+
+### Example Log Entries
+
+```
+[2025-01-08 17:50:12.345] [INFO] === ApexLOB Trading Engine Starting ===
+[2025-01-08 17:50:12.346] [INFO] Alpha Signal Generation: ENABLED
+[2025-01-08 17:50:12.500] [INFO] WebSocket connection established in 153ms
+[2025-01-08 17:50:13.201] [DEBUG] Processing trade: ID=12345, Price=43250.50, Quantity=0.5, Side=BUY
+[2025-01-08 17:50:13.201] [DEBUG] Trade executed: 500 units at 43250.50, Remaining: 0
+[2025-01-08 17:50:13.250] [INFO] Strong signal generated: STRONG_BUY (Strength: 85.2%, RSI: 28.5)
+```
+
+### Usage in Code
+
+```cpp
+LOG_DEBUG("Debug message");
+LOG_INFO("Info message");
+LOG_WARNING("Warning message");
+LOG_ERROR("Error message");
+LOG_FATAL("Fatal error");
+```
+
+## Testing
+
+The project includes a comprehensive test suite with **111+ unit tests** covering core functionality and edge cases.
+
+### Running Tests
+
+```bash
+# Build and run all tests
+cd build
+cmake ..
+make test_alpha_signal test_orderbook test_edge_cases
+
+# Run individual test suites
+./test_alpha_signal    # AlphaSignalGenerator tests (22 tests)
+./test_orderbook       # OrderBook tests (26 tests)
+./test_edge_cases      # Edge case tests (63 tests)
+
+# Or use the test runner script
+./run_tests.sh
+```
+
+### Test Coverage
+
+- **AlphaSignalGenerator**: Indicator calculations, signal generation, history management
+- **OrderBook**: Order matching, VWAP calculation, price priority, thread safety
+- **Edge Cases**: Zero quantities, extreme values, boundary conditions, error handling
+
+### Test Results
+
+All tests are passing:
+- ✅ 22/22 AlphaSignalGenerator tests
+- ✅ 26/26 OrderBook tests
+- ✅ 63/63 Edge case tests
+
+For detailed testing documentation, see [TESTING.md](TESTING.md).
+
 ## Technical Details
 
 ### Order Book Implementation
@@ -666,6 +858,15 @@ curl -I https://stream.binance.com:443
 - Thread-safe operations with `std::mutex`
 - Automatic order matching on submission
 - Efficient volume aggregation at each price level
+- Price-time priority matching (best bid/ask first)
+
+### Alpha Signal Generator
+
+- Maintains rolling price history (up to 1000 data points)
+- Real-time indicator calculations (SMA, RSI, Momentum, Volatility)
+- Thread-safe signal generation with mutex protection
+- Signal strength scoring algorithm
+- Automatic history overflow protection
 
 ### WebSocket Connection
 
@@ -673,6 +874,15 @@ curl -I https://stream.binance.com:443
 - Automatic ping/pong handling (Binance sends pings every 20 seconds)
 - 60-second connection timeout
 - TLS 1.2+ with system certificate validation
+- Automatic error recovery
+
+### Logging System
+
+- Singleton pattern for global access
+- Thread-safe logging with mutex protection
+- Dual output (console + file)
+- Configurable log levels
+- Timestamped log entries with millisecond precision
 
 ### Performance
 
@@ -682,4 +892,69 @@ curl -I https://stream.binance.com:443
 - Efficient JSON parsing with nlohmann/json
 - **10-50x faster than Python implementation** - See [PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md) for detailed benchmarks
 
+## Quick Reference
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `main.cpp` | Main application entry point with WebSocket client |
+| `OrderBook.h` | Order book implementation with matching logic |
+| `AlphaSignalGenerator.h` | Alpha signal generation with technical indicators |
+| `Logger.h` | Thread-safe logging system |
+| `test_*.cpp` | Comprehensive test suites (111+ tests) |
+
+### Common Commands
+
+```bash
+# Build the application
+cd build && cmake .. && make
+
+# Run the trading engine
+./build/TradingEngine
+
+# Run all tests
+./run_tests.sh
+
+# Run benchmarks
+./benchmark.sh
+
+# Check log file
+tail -f apexlob.log
+```
+
+### Signal Interpretation Guide
+
+| Signal | Meaning | Action |
+|--------|---------|--------|
+| **STRONG_BUY** | Strong bullish conditions | Consider buying |
+| **BUY** | Bullish conditions | Monitor for entry |
+| **HOLD** | Neutral/insufficient data | Wait for clearer signal |
+| **SELL** | Bearish conditions | Monitor for exit |
+| **STRONG_SELL** | Strong bearish conditions | Consider selling |
+
+### Log Levels
+
+- **DEBUG**: Detailed debugging (trade processing, calculations)
+- **INFO**: General information (connections, signals)
+- **WARNING**: Non-critical issues (missing data)
+- **ERROR**: Error conditions (connection failures)
+- **FATAL**: Critical errors (shutdown required)
+
+## Documentation
+
+- **[TESTING.md](TESTING.md)** - Comprehensive testing guide and test coverage
+- **[PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md)** - Detailed performance analysis and benchmarks
+
+## License
+
+This project is provided as-is for educational and research purposes.
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- All tests pass (`./run_tests.sh`)
+- Code follows existing style conventions
+- New features include appropriate tests
+- Documentation is updated
 
