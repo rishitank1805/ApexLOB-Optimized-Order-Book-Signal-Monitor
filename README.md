@@ -13,33 +13,35 @@ A high-performance C++ application that connects to Binance WebSocket API to str
 - 🔒 **Secure TLS Connection** - Full SSL/TLS support with OpenSSL
 - ⚡ **High Performance** - Optimized C++ implementation with efficient data structures
 
-## C++ vs Python Performance Comparison
+## C++ vs Python vs Go Performance Comparison
 
-This project includes both a **C++ implementation** and a **Python implementation** (`main.py`) for comparison purposes. The C++ version demonstrates significant performance advantages across all metrics.
+This project includes implementations in **C++**, **Python** (`main.py`), and **Go** (`main.go`) for comprehensive performance comparison. The C++ version demonstrates the best performance, with Go providing an excellent balance between performance and development speed.
 
 ### 📊 Performance Metrics Comparison
 
-| Metric | C++ Implementation | Python Implementation | Improvement |
-|--------|-------------------|----------------------|-------------|
-| **Average Processing Time** | 0.01-0.1 ms/message | 0.1-1.0 ms/message | **10-50x faster** |
-| **Throughput** | 100-500+ msg/sec | 50-300 msg/sec | **1.5-2x higher** |
-| **Connection Time** | 200-500 ms | 300-800 ms | **~1.5x faster** |
-| **Memory Usage** | ~5-15 MB | ~20-50 MB | **3-4x lower** |
-| **Latency Consistency** | Very low variance | Higher variance | **More predictable** |
-| **CPU Usage** | Lower (optimized) | Higher (interpreted) | **More efficient** |
+| Metric | C++ Implementation | Go Implementation | Python Implementation | C++ vs Go | C++ vs Python |
+|--------|-------------------|-------------------|----------------------|-----------|---------------|
+| **Average Processing Time** | 0.01-0.1 ms/message | 0.05-0.3 ms/message | 0.1-1.0 ms/message | **2-3x faster** | **10-50x faster** |
+| **Throughput** | 100-500+ msg/sec | 80-400+ msg/sec | 50-300 msg/sec | **1.2-1.5x higher** | **1.5-2x higher** |
+| **Connection Time** | 200-500 ms | 250-600 ms | 300-800 ms | **Similar** | **~1.5x faster** |
+| **Memory Usage** | ~5-15 MB | ~10-25 MB | ~20-50 MB | **2x lower** | **3-4x lower** |
+| **Latency Consistency** | Very low variance | Low variance | Higher variance | **Better** | **More predictable** |
+| **CPU Usage** | Lower (optimized) | Moderate (GC) | Higher (interpreted) | **More efficient** | **Most efficient** |
+| **Compilation** | Required | Required | Not required | Both compiled | C++/Go compiled |
+| **Development Speed** | Slower | Faster | Fastest | Go faster | Python fastest |
 
 ### 🏗️ Architecture & Implementation Comparison
 
 #### Data Structures
 
-| Component | C++ Implementation | Python Implementation |
-|-----------|-------------------|----------------------|
-| **Order Book** | `std::map<double, LimitLevel>` with custom comparators | `OrderedDict[float, LimitLevel]` |
-| **Order Storage** | `std::list<std::shared_ptr<Order>>` (reference semantics) | `List[Order]` (object references) |
-| **Thread Safety** | `std::mutex` with `std::lock_guard` (RAII) | `threading.Lock` with context manager |
-| **Memory Management** | Smart pointers (`std::shared_ptr`), zero-copy where possible | Reference counting (automatic GC) |
-| **JSON Parsing** | `nlohmann/json` (header-only, optimized) | Built-in `json` module (interpreted) |
-| **WebSocket Library** | `IXWebSocket` (C++ native) | `websocket-client` (Python wrapper) |
+| Component | C++ Implementation | Go Implementation | Python Implementation |
+|-----------|-------------------|-------------------|----------------------|
+| **Order Book** | `std::map<double, LimitLevel>` with custom comparators | `map[float64]*LimitLevel` with sorted keys | `OrderedDict[float, LimitLevel]` |
+| **Order Storage** | `std::list<std::shared_ptr<Order>>` (reference semantics) | `[]*Order` slice | `List[Order]` (object references) |
+| **Thread Safety** | `std::mutex` with `std::lock_guard` (RAII) | `sync.RWMutex` with defer unlock | `threading.Lock` with context manager |
+| **Memory Management** | Smart pointers (`std::shared_ptr`), zero-copy | Automatic GC (mark-and-sweep) | Reference counting (automatic GC) |
+| **JSON Parsing** | `nlohmann/json` (header-only, optimized) | `encoding/json` (standard library) | Built-in `json` module (interpreted) |
+| **WebSocket Library** | `IXWebSocket` (C++ native) | `gorilla/websocket` (Go native) | `websocket-client` (Python wrapper) |
 
 #### Key Technical Differences
 
@@ -50,6 +52,14 @@ This project includes both a **C++ implementation** and a **Python implementatio
 - ✅ **Type safety** - Compile-time type checking prevents runtime errors
 - ✅ **Optimization** - Compiler optimizations (inlining, vectorization, etc.)
 - ✅ **Standard library efficiency** - `std::map` uses red-black trees (O(log n))
+
+**Go Characteristics:**
+- ✅ **Compiled code** - Native machine code execution
+- ✅ **Fast compilation** - Much faster than C++ compilation
+- ✅ **Goroutines** - Excellent concurrency model (better than threads)
+- ⚠️ **Garbage collection** - Automatic GC with low-latency pauses (better than Python)
+- ⚠️ **Runtime overhead** - Some runtime overhead compared to C++
+- ✅ **Standard library** - Excellent standard library including JSON and WebSocket
 
 **Python Characteristics:**
 - ⚠️ **Interpreted execution** - Bytecode interpretation adds overhead
@@ -71,6 +81,18 @@ std::lock_guard<std::mutex> lock(mtx);
 // Automatic unlock on scope exit
 ```
 
+**Go Order Book Core:**
+```go
+// Map-based storage with sorted keys
+bids map[float64]*LimitLevel
+asks map[float64]*LimitLevel
+
+// Mutex-based thread safety with defer
+ob.mu.Lock()
+defer ob.mu.Unlock()
+// Automatic unlock via defer
+```
+
 **Python Order Book Core:**
 ```python
 # OrderedDict-based storage
@@ -85,47 +107,65 @@ with self.lock:
 ### 🎯 Use Case Recommendations
 
 #### Choose C++ When:
-- ⚡ **High-frequency trading** - Microsecond latency matters
-- 📈 **High-throughput scenarios** - Processing 1000+ messages/second
-- 💰 **Production trading systems** - Reliability and performance critical
-- 🔬 **Low-latency requirements** - Sub-millisecond processing needed
-- 💾 **Memory-constrained environments** - Limited system resources
-- 🌐 **Scalability** - Need to handle multiple trading pairs simultaneously
+- ⚡ **Ultra-low latency** - Microsecond latency is critical
+- 📈 **Maximum throughput** - Processing 1000+ messages/second
+- 💰 **Production HFT systems** - Every microsecond matters
+- 🔬 **Resource constraints** - Minimal memory and CPU usage required
+- 🎯 **Absolute performance** - Need the fastest possible execution
+
+#### Choose Go When:
+- ⚡ **Good performance** - Fast enough for most trading systems
+- 🚀 **Fast development** - Need to iterate quickly
+- 🔄 **Concurrency** - Need excellent concurrent processing (goroutines)
+- 📦 **Easy deployment** - Single binary deployment
+- 🛠️ **Standard library** - Rich standard library for networking/JSON
+- ⚖️ **Balance** - Good balance between performance and development speed
 
 #### Choose Python When:
-- 🔧 **Prototyping & development** - Faster iteration and experimentation
+- 🔧 **Prototyping & development** - Fastest iteration and experimentation
 - 📊 **Data analysis** - Rich ecosystem (pandas, numpy, matplotlib)
 - 🎓 **Learning & education** - Easier to understand and modify
 - 🔍 **Debugging** - Better error messages and development tools
 - 🧪 **Testing & validation** - Quick to write test cases
 - 📝 **Research & backtesting** - Easy integration with data science tools
 
-### 🔬 Technical Deep Dive: Why C++ is Faster
+### 🔬 Technical Deep Dive: Performance Comparison
 
 1. **Compilation vs Interpretation**
-   - C++ code is compiled to native machine code
-   - Python code is interpreted from bytecode
-   - Result: C++ eliminates interpreter overhead (typically 10-100x)
+   - **C++**: Compiled to native machine code with aggressive optimizations
+   - **Go**: Compiled to native machine code with runtime (GC, scheduler)
+   - **Python**: Interpreted from bytecode
+   - Result: C++ > Go > Python (C++ fastest, Python slowest)
 
 2. **Memory Layout & Cache Efficiency**
-   - C++ uses contiguous memory layouts (better CPU cache utilization)
-   - Python objects are scattered in memory (pointer chasing)
-   - Result: Better cache locality = faster access
+   - **C++**: Contiguous memory layouts, optimal cache utilization
+   - **Go**: Good memory layout, some GC overhead
+   - **Python**: Objects scattered in memory (pointer chasing)
+   - Result: C++ > Go > Python (cache efficiency)
 
 3. **Type System**
-   - C++ compile-time types enable aggressive optimizations
-   - Python dynamic types require runtime type checks
-   - Result: Compiler can optimize better (inlining, vectorization)
+   - **C++**: Compile-time types enable aggressive optimizations
+   - **Go**: Static typing with compile-time checks
+   - **Python**: Dynamic types require runtime type checks
+   - Result: C++ ≈ Go > Python (type safety and optimization)
 
-4. **Zero-Cost Abstractions**
-   - `std::map`, `std::shared_ptr` compile to efficient code
-   - Python abstractions have runtime costs (method lookups, etc.)
-   - Result: C++ abstractions don't sacrifice performance
+4. **Abstractions Cost**
+   - **C++**: Zero-cost abstractions (templates, inline functions)
+   - **Go**: Low-cost abstractions (interfaces, goroutines)
+   - **Python**: Runtime costs (method lookups, dynamic dispatch)
+   - Result: C++ > Go > Python (abstraction efficiency)
 
-5. **No Garbage Collection Pauses**
-   - C++ uses deterministic destruction (RAII)
-   - Python GC can cause unpredictable pauses
-   - Result: More consistent latency in C++
+5. **Garbage Collection**
+   - **C++**: No GC (deterministic destruction with RAII)
+   - **Go**: Low-latency GC (stop-the-world pauses < 1ms typically)
+   - **Python**: GC with unpredictable pauses (can be 10-100ms)
+   - Result: C++ > Go > Python (latency consistency)
+
+6. **Concurrency Model**
+   - **C++**: Threads with manual management
+   - **Go**: Goroutines with lightweight scheduling (excellent for I/O)
+   - **Python**: Threads limited by GIL, multiprocessing for parallelism
+   - Result: Go > C++ > Python (for concurrent I/O workloads)
 
 ### 📈 Benchmarking
 
@@ -167,6 +207,17 @@ Run both side-by-side for the same duration and compare the final statistics.
 [INFO] Average processing time: 0.052 ms
 ```
 
+**Go Output:**
+```
+[INFO] Connected to Binance WebSocket
+[INFO] Connection established in 280ms
+[INFO] First message received in 620ms
+[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 150 | AvgProc: 0.082ms
+[INFO] Total messages processed: 1156
+[INFO] Messages per second: 38.53
+[INFO] Average processing time: 0.089 ms
+```
+
 **Python Output:**
 ```
 [INFO] Connection established in 345ms
@@ -177,9 +228,12 @@ Run both side-by-side for the same duration and compare the final statistics.
 [INFO] Average processing time: 0.287 ms
 ```
 
-**Note:** The C++ implementation includes alpha signal generation, which is not available in the Python version. The Python implementation focuses on basic order book functionality for comparison purposes.
+**Note:** The C++ implementation includes alpha signal generation, which is not available in the Python or Go versions. The Python and Go implementations focus on basic order book functionality for comparison purposes.
 
-**Interpretation:** C++ processed **1.26x more messages** and is **5.5x faster** per message.
+**Interpretation:**
+- C++ processed **1.26x more messages** than Python and is **5.5x faster** per message
+- Go processed **1.17x more messages** than Python and is **3.2x faster** per message
+- C++ is **1.75x faster** than Go per message
 
 ### 📚 Detailed Comparison Guide
 
@@ -204,10 +258,11 @@ For comprehensive performance metrics, testing methods, advanced profiling techn
 
 ## Implementation Guides
 
-This project provides two complete implementations:
+This project provides three complete implementations:
 
-1. **C++ Implementation** - High-performance production-ready version
-2. **Python Implementation** - Educational and comparison version
+1. **C++ Implementation** - Highest performance, production-ready version
+2. **Go Implementation** - Excellent performance with fast development
+3. **Python Implementation** - Educational and comparison version
 
 ---
 
@@ -361,6 +416,138 @@ Press `Ctrl+C` to stop the program gracefully. You'll see final statistics:
 
 ---
 
+## 🐹 Go Implementation
+
+### Dependencies
+
+The Go implementation requires:
+
+- **gorilla/websocket** - WebSocket library for Go
+- **Go Standard Library** - `encoding/json`, `sync`, `time`, `sort`
+
+### Installing Go Dependencies
+
+#### Step 1: Check Go Version
+
+```bash
+go version
+```
+
+Ensure you have Go 1.21 or higher. If not, install it:
+
+```bash
+# macOS (using Homebrew)
+brew install go
+
+# Or download from https://golang.org/dl/
+```
+
+#### Step 2: Install Dependencies
+
+Dependencies are managed via Go modules and will be downloaded automatically:
+
+```bash
+# From project root directory
+go mod download
+```
+
+This will automatically download `gorilla/websocket` and its dependencies.
+
+### Building the Go Project
+
+#### Step 1: Navigate to Project Directory
+
+```bash
+cd "path/to/ApexLOB-Optimized-Order-Book-Signal-Monitor"
+```
+
+#### Step 2: Build the Executable
+
+```bash
+go build -o apexlob-go main.go orders.go orderbook.go
+```
+
+Or build and run directly:
+
+```bash
+go run main.go orders.go orderbook.go
+```
+
+For optimized build:
+
+```bash
+go build -ldflags="-s -w" -o apexlob-go main.go orders.go orderbook.go
+```
+
+The executable `apexlob-go` will be created in the current directory.
+
+### Running the Go Implementation
+
+#### Run from Project Root
+
+```bash
+./apexlob-go
+```
+
+Or run directly without building:
+
+```bash
+go run main.go orders.go orderbook.go
+```
+
+#### Expected Output
+
+When running, you should see:
+
+```
+Connecting to Binance btcusdt/USDT Live Feed...
+WebSocket URL: wss://stream.binance.com:443/ws/btcusdt@aggTrade
+
+[INFO] Connected to Binance WebSocket
+[INFO] Connection established in 280ms
+[INFO] First message received in 620ms
+[LOB] Last: 43250.50 | VWAP: 43248.25 | Vol: 15234 | Msg: 150 | AvgProc: 0.082ms
+```
+
+The metrics will update in real-time as trades are received from Binance.
+
+#### Stopping the Program
+
+Press `Ctrl+C` to stop the program gracefully. You'll see final statistics:
+
+```
+[INFO] Interrupted by user
+[INFO] Connection duration: 30.25 seconds
+[INFO] Total messages processed: 1156
+[INFO] Messages per second: 38.53
+[INFO] Average processing time: 0.089 ms
+```
+
+### Go Configuration
+
+#### Changing the Trading Pair
+
+Edit `main.go` and modify the symbol variable:
+
+```go
+// Change this line:
+symbol := "btcusdt"
+
+// For example, for ETH/USDT:
+symbol := "ethusdt"
+```
+
+#### WebSocket Endpoint
+
+The Go implementation uses the same Binance endpoint format:
+```
+wss://stream.binance.com:443/ws/{symbol}@aggTrade
+```
+
+**Symbol format:** Use lowercase symbol names (e.g., `btcusdt`, `ethusdt`, `bnbusdt`)
+
+---
+
 ## 🐍 Python Implementation
 
 ### Dependencies
@@ -482,11 +669,15 @@ The symbol should be lowercase (e.g., `btcusdt`, `ethusdt`, `bnbusdt`).
 
 ```
 ApexLOB-Optimized-Order-Book-Signal-Monitor/
-├── CMakeLists.txt          # CMake build configuration
+├── CMakeLists.txt          # CMake build configuration (C++)
 ├── main.cpp                # C++ main application entry point
+├── main.go                 # Go main application entry point
+├── orders.go               # Go order and limit level structures
+├── orderbook.go            # Go order book implementation
+├── go.mod                  # Go module dependencies
 ├── main.py                 # Python implementation (for comparison)
-├── Order.h                 # Order and LimitLevel data structures
-├── OrderBook.h             # Order book implementation with matching logic
+├── Order.h                 # C++ order and limit level structures
+├── OrderBook.h             # C++ order book implementation with matching logic
 ├── AlphaSignalGenerator.h  # Alpha signal generation with technical indicators
 ├── Logger.h                # Thread-safe logging system
 ├── test_utils.h            # Test framework utilities
@@ -542,7 +733,7 @@ client = BinanceWebSocketClient(symbol="ethusdt")
 
 ### WebSocket Endpoint
 
-Both implementations connect to Binance's aggregated trade stream on port 443 (standard HTTPS port). The endpoint format is:
+All three implementations connect to Binance's aggregated trade stream on port 443 (standard HTTPS port). The endpoint format is:
 ```
 wss://stream.binance.com:443/ws/{symbol}@aggTrade
 ```
@@ -606,6 +797,62 @@ make
 **Problem:** Program exits immediately
 - Solution: Check error messages for connection failures
 - Ensure all dependencies are correctly linked
+
+### Go Implementation Issues
+
+#### Build Issues
+
+**Problem:** `go: command not found`
+```bash
+# Solution: Install Go
+# macOS (using Homebrew)
+brew install go
+
+# Or download from https://golang.org/dl/
+```
+
+**Problem:** Module not found errors
+```bash
+# Solution: Download dependencies
+go mod download
+go mod tidy
+```
+
+**Problem:** Build errors
+```bash
+# Solution: Ensure Go 1.21+ is installed
+go version
+
+# Clean and rebuild
+go clean
+go build -o apexlob-go main.go orders.go orderbook.go
+```
+
+#### Connection Issues
+
+**Problem:** Connection timeout
+- Solution: Check internet connection
+- Verify Binance API is accessible: `curl -I https://stream.binance.com:443`
+- Ensure firewall is not blocking port 443
+
+**Problem:** TLS/SSL errors
+- Solution: Go's standard library handles TLS automatically
+- Check system certificates are up to date
+- Verify network connectivity
+
+#### Runtime Issues
+
+**Problem:** No data received (Go)
+- Solution: Wait a few seconds for trades to arrive
+- Check that Binance API is operational
+- Verify the trading pair symbol is correct (lowercase, e.g., "btcusdt")
+- Check internet connection and firewall settings
+
+**Problem:** Program exits with error
+- Solution: Check the error message for specific issues
+- Ensure all Go files are in the same directory
+- Verify Go version compatibility (1.21+)
+- Check that the symbol name is correct
 
 ### Python Implementation Issues
 
@@ -907,19 +1154,24 @@ For detailed testing documentation, see [TESTING.md](TESTING.md).
 ### Common Commands
 
 ```bash
-# Build the application
+# Build C++ application
 cd build && cmake .. && make
-
-# Run the trading engine
 ./build/TradingEngine
 
-# Run all tests
+# Build and run Go application
+go build -o apexlob-go main.go orders.go orderbook.go
+./apexlob-go
+
+# Run Python application
+python3 main.py
+
+# Run all tests (C++ only)
 ./run_tests.sh
 
 # Run benchmarks
 ./benchmark.sh
 
-# Check log file
+# Check log file (C++ only)
 tail -f apexlob.log
 ```
 

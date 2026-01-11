@@ -16,3 +16,9 @@ Thumbs.db
 # Ignore log files
 *.log
 apexlob.log
+
+# Ignore Go build artifacts
+apexlob-go
+*.exe
+*.test
+*.prof
