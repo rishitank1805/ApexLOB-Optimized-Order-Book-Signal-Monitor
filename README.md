@@ -684,7 +684,9 @@ ApexLOB-Optimized-Order-Book-Signal-Monitor/
 ├── test_alpha_signal.cpp   # AlphaSignalGenerator test suite (22 tests)
 ├── test_orderbook.cpp      # OrderBook test suite (26 tests)
 ├── test_edge_cases.cpp     # Edge case tests (63 tests)
-├── run_tests.sh            # Test runner script
+├── run_tests.sh            # C++ test runner script
+├── orders_test.go          # Go order structure tests
+├── orderbook_test.go       # Go orderbook tests
 ├── README.md               # This file
 ├── TESTING.md              # Testing guide and documentation
 ├── PERFORMANCE_COMPARISON.md # Detailed performance comparison guide
@@ -1149,7 +1151,8 @@ For detailed testing documentation, see [TESTING.md](TESTING.md).
 | `OrderBook.h` | Order book implementation with matching logic |
 | `AlphaSignalGenerator.h` | Alpha signal generation with technical indicators |
 | `Logger.h` | Thread-safe logging system |
-| `test_*.cpp` | Comprehensive test suites (111+ tests) |
+| `test_*.cpp` | Comprehensive C++ test suites (111+ tests) |
+| `*_test.go` | Go test suites (21+ tests) |
 
 ### Common Commands
 
@@ -1165,8 +1168,11 @@ go build -o apexlob-go main.go orders.go orderbook.go
 # Run Python application
 python3 main.py
 
-# Run all tests (C++ only)
+# Run all C++ tests
 ./run_tests.sh
+
+# Run Go tests
+go test -v ./...
 
 # Run benchmarks
 ./benchmark.sh
@@ -1205,7 +1211,8 @@ This project is provided as-is for educational and research purposes.
 ## Contributing
 
 Contributions are welcome! Please ensure:
-- All tests pass (`./run_tests.sh`)
+- All C++ tests pass (`./run_tests.sh`)
+- All Go tests pass (`go test -v ./...`)
 - Code follows existing style conventions
 - New features include appropriate tests
 - Documentation is updated
